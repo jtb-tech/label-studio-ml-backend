@@ -3,7 +3,8 @@ version: "3.8"
 services:
   segment_anything_model:
     container_name: segment_anything_model
-    image: heartexlabs/label-studio-ml-backend:sam-master
+    image: jtbrd/sam:1.0.1
+    platform: linux/amd64  # Specify platform for cross-platform compatibility
     build:
       context: .
       shm_size: '4gb'

@@ -83,13 +83,72 @@ class SAMPredictor(object):
         if payload is None:
             # Get image and embeddings
             logger.debug(f'Payload not found for {img_path} in `IN_MEM_CACHE`: calculating from scratch')
-            image_path = get_local_path(
-                img_path,
-                access_token=LABEL_STUDIO_ACCESS_TOKEN,
-                hostname=LABEL_STUDIO_HOST,
-                task_id=task.get('id')
-            )
-            image = cv2.imread(image_path)
+            logger.info(f'{LABEL_STUDIO_HOST} is LABEL_STUDIO_HOST')
+            
+            # Construct full URL if img_path is relative
+            if not img_path.startswith(('http://', 'https://')):
+                if LABEL_STUDIO_HOST:
+                    # Remove trailing slash from host and leading slash from path if necessary
+                    host = LABEL_STUDIO_HOST.rstrip('/')
+                    path = img_path.lstrip('/')
+                    full_url = f"{host}/{path}"
+                    logger.debug(f'Constructed full URL from relative path: {full_url}')
+                else:
+                    full_url = img_path
+                    logger.warning('LABEL_STUDIO_HOST not set, using relative path as-is')
+            else:
+                full_url = img_path
+                logger.debug(f'Using absolute URL: {full_url}')
+            
+            # Get local path from the URL
+            try:
+                image_path = get_local_path(
+                    full_url,
+                    access_token=LABEL_STUDIO_ACCESS_TOKEN,
+                    hostname=LABEL_STUDIO_HOST,
+                    task_id=task.get('id')
+                )
+                
+                # Read the image from local path
+                image = cv2.imread(image_path)
+                
+                # Check if image was loaded successfully
+                if image is None:
+                    logger.warning(f"Failed to read image from local path: {image_path}")
+                    raise ValueError("Image could not be loaded from local path")
+                    
+            except Exception as e:
+                logger.warning(f"Failed to get local path or read image: {e}")
+                logger.info(f"Attempting to read directly from URL: {full_url}")
+                
+                # Try to read directly from URL as fallback
+                import urllib.request
+                import numpy as np
+                
+                try:
+                    # Download image data from URL
+                    if LABEL_STUDIO_ACCESS_TOKEN and LABEL_STUDIO_HOST and full_url.startswith(LABEL_STUDIO_HOST):
+                        # Add authorization header for Label Studio URLs
+                        req = urllib.request.Request(full_url)
+                        req.add_header('Authorization', f'Token {LABEL_STUDIO_ACCESS_TOKEN}')
+                        resp = urllib.request.urlopen(req)
+                    else:
+                        resp = urllib.request.urlopen(full_url)
+                    
+                    # Convert to numpy array and decode as image
+                    image_array = np.asarray(bytearray(resp.read()), dtype=np.uint8)
+                    image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+                    
+                    if image is None:
+                        raise ValueError(f"Failed to decode image from URL: {full_url}")
+                    
+                    logger.info("Successfully read image directly from URL")
+                    
+                except Exception as url_error:
+                    logger.error(f"Failed to read image from URL: {url_error}")
+                    raise ValueError(f"Could not load image from either local path or URL: {full_url}")
+            
+            # Convert color space
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             self.predictor.set_image(image)
             payload = {'image_shape': image.shape[:2]}
