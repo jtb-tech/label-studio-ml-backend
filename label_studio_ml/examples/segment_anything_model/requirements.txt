@@ -1,4 +1,5 @@
 label_studio_converter
+numpy==1.26.4
 opencv-python
 onnxruntime<=1.15.1
 onnx
