@@ -1,3 +1,7 @@
+
+# Change log
+- https://github.com/jtb-tech/label-studio-ml-backend/pull/2
+
 # What is the Label Studio ML backend?
 
 The Label Studio ML backend is an SDK that lets you wrap your machine learning code and turn it into a web server.
