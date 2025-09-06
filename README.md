@@ -1,6 +1,6 @@
 
 # Change log
-- https://github.com/jtb-tech/label-studio-ml-backend/pull/2
+- [modify by marcus](https://github.com/jtb-tech/label-studio-ml-backend/pull/2)
 
 # What is the Label Studio ML backend?
 
